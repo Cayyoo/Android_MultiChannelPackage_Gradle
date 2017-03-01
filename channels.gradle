@@ -1,0 +1,57 @@
+apply plugin: 'com.android.application'
+
+// load properties
+Properties properties = new Properties()
+properties.load(project.rootProject.file('channels.properties').newDataInputStream())
+String channelDefault = properties.getProperty('channel.default')
+String channleList = properties.getProperty('channel.list')
+String[] channelArray = channleList.split(',')
+
+android {
+    defaultConfig {
+        // dex突破65535的限制
+        multiDexEnabled true
+        // 默认是umeng的渠道
+        manifestPlaceholders = [CHANNEL_VALUE: channelDefault]
+    }
+
+    //写法一，多渠道打包
+    productFlavors {
+        for (int i = 0 ; i < channelArray.size(); i++) {
+            def channel = channelArray[i]
+            "${channel}"{
+                manifestPlaceholders = [CHANNEL_VALUE: channel]
+            }
+        }
+    }
+
+    //写法二：
+    // 弊端：项目渠道号经常变，每个版本都有不同的渠道号，不停的在增加导致gradle文件就非常长
+    /*productFlavors {
+        xiaomi {}
+        360 {}
+        baidu {}
+        wandoujia {}
+    }
+
+    productFlavors.all {
+        flavor -> flavor.manifestPlaceholders = [CHANNEL_VALUE: name]
+    }*/
+
+
+
+
+    //给输出的.apk文件命名
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def outputFile = output.outputFile
+            if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                // 输出apk名称为release_v版本名_channelName.apk
+                def fileName = "release_v${defaultConfig.versionName}_${variant.productFlavors[0].name}.apk"
+                output.outputFile = new File(outputFile.parent, fileName)
+            }
+        }
+    }
+
+}
+
